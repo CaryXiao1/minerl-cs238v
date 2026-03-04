@@ -130,6 +130,7 @@ class _MultiAgentEnv(gym.Env):
 
     def _init_seeding(self) -> None:
         self._seed = None
+        self._world_seed = None
 
     ########### CONFIGURATION METHODS ########
 
@@ -150,6 +151,22 @@ class _MultiAgentEnv(gym.Env):
         if seed_spaces:
             self.observation_space.seed(self._seed)
             self.action_space.seed(self._seed)
+
+    def world_seed(self, world_seed: int = None) -> None:
+        """Sets the world seed for Minecraft world generation.
+
+        This determines the seed used by DefaultWorldGenerator for procedural generation.
+        The world seed controls biome layout, ore distribution, and other world features.
+
+        Note:
+        THIS MUST BE CALLED BEFORE :code:`env.reset()`
+        
+        Args:
+            world_seed (int, optional): Seed for world generation. Must be a valid uint64_t integer.
+                                        Defaults to None (random seed).
+        """
+        assert isinstance(world_seed, int) or world_seed is None, "World seed must be an int!"
+        self._world_seed = world_seed
 
     def make_interactive(self, port, max_players=10, realtime=True):
         """
@@ -423,6 +440,14 @@ class _MultiAgentEnv(gym.Env):
         try:
             # First reset the env spec and its handlers
             self.task.reset()
+            
+            # Apply world seed to world generators if set
+            if self._world_seed is not None:
+                from minerl.herobraine.hero.handlers.server.world import DefaultWorldGenerator
+                for i, generator in enumerate(self.task.server_world_generators):
+                    if isinstance(generator, DefaultWorldGenerator):
+                        # Update the world seed for this generator
+                        generator.world_seed = self._world_seed
 
             # Then reset the obs and act spaces from the env spec.
             self._setup_spaces()
@@ -463,6 +488,7 @@ class _MultiAgentEnv(gym.Env):
             # perhaps the first seed sets the seed of the random engine which then seeds
             # the episode in a cascading fashion
             self._seed = None
+            self._world_seed = None
 
     def _setup_spaces(self) -> None:
         self.observation_space = self.task.observation_space

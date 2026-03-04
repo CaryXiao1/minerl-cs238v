@@ -15,19 +15,22 @@ class DefaultWorldGenerator(Handler):
         return str(
             """<DefaultWorldGenerator
                 forceReset="{{force_reset | string | lower}}"
-                generatorOptions='{{generator_options}}'/>
+                generatorOptions='{{generator_options}}'
+                {% if world_seed is not none %}seed="{{world_seed | string}}"{% endif %}/>
             """
         )
 
-    def __init__(self, force_reset=True, generator_options: str = "{}"):
+    def __init__(self, force_reset=True, generator_options: str = "{}", world_seed: int = None):
         """Generates a world using minecraft procedural generation.
 
         Args:
             force_reset (bool, optional): If the world should be reset every episode.. Defaults to True.
             generator_options: A JSON object specifying parameters to the procedural generator.
+            world_seed (int, optional): Seed for world generation. Defaults to None (random seed).
         """
         self.force_reset = force_reset
         self.generator_options = generator_options
+        self.world_seed = world_seed
 
 
 class FileWorldGenerator(Handler):
