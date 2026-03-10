@@ -165,6 +165,7 @@ class _MultiAgentEnv(gym.Env):
             world_seed (int, optional): Seed for world generation. Must be a valid uint64_t integer.
                                         Defaults to None (random seed).
         """
+        print(f"DEBUG world_seed() called with: {world_seed}")
         assert isinstance(world_seed, int) or world_seed is None, "World seed must be an int!"
         self._world_seed = world_seed
 
@@ -447,7 +448,10 @@ class _MultiAgentEnv(gym.Env):
                 for i, generator in enumerate(self.task.server_world_generators):
                     if isinstance(generator, DefaultWorldGenerator):
                         # Update the world seed for this generator
+                        print(f"DEBUG: Setting world_seed to {self._world_seed} on generator {i}")
+                        print(f"DEBUG: Generator before: world_seed={generator.world_seed}")
                         generator.world_seed = self._world_seed
+                        print(f"DEBUG: Generator after: world_seed={generator.world_seed}")
 
             # Then reset the obs and act spaces from the env spec.
             self._setup_spaces()

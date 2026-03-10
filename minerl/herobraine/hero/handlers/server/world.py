@@ -14,11 +14,16 @@ class DefaultWorldGenerator(Handler):
     def xml_template(self) -> str:
         return str(
             """<DefaultWorldGenerator
+                {% if world_seed is not none %}seed="{{world_seed | string}}"{% endif %}
                 forceReset="{{force_reset | string | lower}}"
-                generatorOptions='{{generator_options}}'
-                {% if world_seed is not none %}seed="{{world_seed | string}}"{% endif %}/>
+                generatorOptions='{{generator_options}}'/>
             """
         )
+
+    def xml(self) -> str:
+        """Override to add debug logging"""
+        print(f"DEBUG DefaultWorldGenerator.xml(): self.world_seed = {self.world_seed}")
+        return super().xml()
 
     def __init__(self, force_reset=True, generator_options: str = "{}", world_seed: int = None):
         """Generates a world using minecraft procedural generation.
