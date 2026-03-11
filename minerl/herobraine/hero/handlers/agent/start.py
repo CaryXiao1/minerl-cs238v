@@ -275,6 +275,17 @@ class FakeCursorSize(Handler):
     def xml_template(self) -> str:
         return "<FakeCursorSize>{{size}}</FakeCursorSize>"
 
+class WorldSeed(Handler):
+    def __init__(self, seed: int):
+        self.seed = seed
+
+    def to_string(self) -> str:
+        return f"world_seed({self.seed})"
+
+    def xml_template(self) -> str:
+        return "<WorldSeed>{{seed}}</WorldSeed>"
+
+
 class LoadWorldAgentStart(Handler):
     def __init__(self, filename):
         self.filename = filename

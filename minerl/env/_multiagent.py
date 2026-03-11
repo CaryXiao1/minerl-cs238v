@@ -445,13 +445,23 @@ class _MultiAgentEnv(gym.Env):
             # Apply world seed to world generators if set
             if self._world_seed is not None:
                 from minerl.herobraine.hero.handlers.server.world import DefaultWorldGenerator
+                from minerl.herobraine.hero.handlers.agent.start import WorldSeed
                 for i, generator in enumerate(self.task.server_world_generators):
                     if isinstance(generator, DefaultWorldGenerator):
                         # Update the world seed for this generator
                         print(f"DEBUG: Setting world_seed to {self._world_seed} on generator {i}")
-                        print(f"DEBUG: Generator before: world_seed={generator.world_seed}")
                         generator.world_seed = self._world_seed
-                        print(f"DEBUG: Generator after: world_seed={generator.world_seed}")
+                
+                # Also add it to the agent start handlers to make it show up in the XML AgentSection
+                # This is what EnvServer.java getSeed() looks for.
+                for i in range(len(self.task.agent_start)):
+                    # Check if it's already there
+                    if not any(isinstance(h, WorldSeed) for h in self.task.agent_start[i]):
+                        self.task.agent_start[i].append(WorldSeed(self._world_seed))
+                    else:
+                        for h in self.task.agent_start[i]:
+                            if isinstance(h, WorldSeed):
+                                h.seed = self._world_seed
 
             # Then reset the obs and act spaces from the env spec.
             self._setup_spaces()
@@ -492,7 +502,6 @@ class _MultiAgentEnv(gym.Env):
             # perhaps the first seed sets the seed of the random engine which then seeds
             # the episode in a cascading fashion
             self._seed = None
-            self._world_seed = None
 
     def _setup_spaces(self) -> None:
         self.observation_space = self.task.observation_space
