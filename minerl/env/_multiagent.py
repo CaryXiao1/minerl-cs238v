@@ -131,6 +131,7 @@ class _MultiAgentEnv(gym.Env):
     def _init_seeding(self) -> None:
         self._seed = None
         self._world_seed = None
+        self._spawn_point = None
 
     ########### CONFIGURATION METHODS ########
 
@@ -168,6 +169,28 @@ class _MultiAgentEnv(gym.Env):
         print(f"DEBUG world_seed() called with: {world_seed}")
         assert isinstance(world_seed, int) or world_seed is None, "World seed must be an int!"
         self._world_seed = world_seed
+
+    def spawn_point(self, x: int = None, y: int = None, z: int = None) -> None:
+        """Sets a fixed spawn point for the agent.
+
+        This is applied on the next ``reset()`` by injecting an
+        ``AgentStartPlacement`` handler into the mission.
+
+        Note:
+        THIS MUST BE CALLED BEFORE :code:`env.reset()`
+
+        Args:
+            x: World x coordinate.
+            y: World y coordinate.
+            z: World z coordinate.
+        """
+        if x is None and y is None and z is None:
+            self._spawn_point = None
+            return
+
+        assert all(v is not None for v in (x, y, z)), "Spawn point requires x, y, and z."
+        assert all(isinstance(v, int) for v in (x, y, z)), "Spawn point coordinates must be integers."
+        self._spawn_point = (int(x), int(y), int(z))
 
     def make_interactive(self, port, max_players=10, realtime=True):
         """
@@ -462,6 +485,27 @@ class _MultiAgentEnv(gym.Env):
                         for h in self.task.agent_start[i]:
                             if isinstance(h, WorldSeed):
                                 h.seed = self._world_seed
+
+            if self._spawn_point is not None:
+                from minerl.herobraine.hero.handlers.agent.start import AgentStartPlacement
+
+                spawn_x, spawn_y, spawn_z = self._spawn_point
+                print(f"DEBUG: Setting spawn point to {self._spawn_point}")
+                for agent_start_handlers in self.task.agent_start:
+                    existing_placement = next(
+                        (h for h in agent_start_handlers if isinstance(h, AgentStartPlacement)),
+                        None
+                    )
+                    if existing_placement is None:
+                        print(f"DEBUG: Adding new spawn point handler at {self._spawn_point}")
+                        agent_start_handlers.append(
+                            AgentStartPlacement(spawn_x, spawn_y, spawn_z)
+                        )
+                    else:
+                        print(f"DEBUG: Updating existing spawn point from {(existing_placement.x, existing_placement.y, existing_placement.z)} to {self._spawn_point}")
+                        existing_placement.x = spawn_x
+                        existing_placement.y = spawn_y
+                        existing_placement.z = spawn_z
 
             # Then reset the obs and act spaces from the env spec.
             self._setup_spaces()

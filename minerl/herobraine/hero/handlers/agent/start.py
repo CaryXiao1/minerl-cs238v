@@ -125,7 +125,7 @@ class AgentStartPlacement(Handler):
             """<Placement x="{{x}}" y="{{y}}" z="{{z}}" yaw="{{yaw}}" pitch="{{pitch}}"/>"""
         )
 
-    def __init__(self, x, y, z, yaw=0.0, pitch=0.0):
+    def __init__(self, x, y, z, yaw=0, pitch=0):
         self.x = x
         self.y = y
         self.z = z

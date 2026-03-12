@@ -1818,7 +1818,7 @@ diff -u1 -rN MCP-Reborn-vanilla/src/main/java/com/minerl/multiagent/RandomHelper
 diff -u1 -rN MCP-Reborn-vanilla/src/main/java/com/minerl/multiagent/env/EnvServer.java MCP-Reborn/src/main/java/com/minerl/multiagent/env/EnvServer.java
 --- MCP-Reborn-vanilla/src/main/java/com/minerl/multiagent/env/EnvServer.java	1970-01-01 01:00:00.000000000 +0100
 +++ MCP-Reborn/src/main/java/com/minerl/multiagent/env/EnvServer.java	2022-06-23 00:28:31.911515382 +0100
-@@ -0,0 +1,715 @@
+@@ -0,0 +1,725 @@
 +package com.minerl.multiagent.env;
 +
 +import com.google.common.base.Charsets;
@@ -1845,6 +1845,7 @@ diff -u1 -rN MCP-Reborn-vanilla/src/main/java/com/minerl/multiagent/env/EnvServe
 +import net.minecraft.server.MinecraftServer;
 +import net.minecraft.util.ResourceLocation;
 +import net.minecraft.util.datafix.codec.DatapackCodec;
++import net.minecraft.util.math.BlockPos;
 +import net.minecraft.util.registry.DynamicRegistries;
 +import net.minecraft.util.registry.Registry;
 +import net.minecraft.util.SoundCategory;
@@ -2237,6 +2238,15 @@ diff -u1 -rN MCP-Reborn-vanilla/src/main/java/com/minerl/multiagent/env/EnvServe
 +
 +        if (spawnInVillage) {
 +            MinecraftServer.setSpawnInVillage(true);
++        }
++        PosAndDirection startPos = getAgentStart(missionInit).getPlacement();
++        if (startPos != null) {
++            MinecraftServer.setForcedSpawnPoint(
++                    new BlockPos(startPos.getX(), startPos.getY(), startPos.getZ()),
++                    startPos.getYaw()
++            );
++        } else {
++            MinecraftServer.setForcedSpawnPoint(null, 0.0F);
 +        }
 +
 +
@@ -7148,7 +7158,7 @@ diff -u1 -rN MCP-Reborn-vanilla/src/main/java/net/minecraft/server/MinecraftServ
     private float tickTime;
 +   private float tickTimeRaw;
     private final Executor backgroundExecutor;
-@@ -228,2 +233,9 @@
+@@ -228,2 +233,12 @@
  
 +   private String worldZipPrefix;
 +   private String uploadPath;
@@ -7156,6 +7166,9 @@ diff -u1 -rN MCP-Reborn-vanilla/src/main/java/net/minecraft/server/MinecraftServ
 +   private int autosavePeriod = 200;
 +   private static Predicate<Biome> spawnBiomePredicate = b -> b.getMobSpawnInfo().isValidSpawnBiomeForPlayer();
 +   private static boolean spawnInVillage = false;
++   @Nullable
++   private static BlockPos forcedSpawnPoint = null;
++   private static float forcedSpawnAngle = 0.0F;
 +
     public static <S extends MinecraftServer> S startServer(Function<Thread, S> threadFunction) {
 @@ -231,3 +243,3 @@
@@ -7183,12 +7196,15 @@ diff -u1 -rN MCP-Reborn-vanilla/src/main/java/net/minecraft/server/MinecraftServ
 -            func_240786_a_(serverworld, iserverworldinfo, dimensiongeneratorsettings.hasBonusChest(), flag, true);
 +            findSpawnPos(serverworld, iserverworldinfo, dimensiongeneratorsettings.hasBonusChest(), flag, true);
              iserverworldinfo.setInitialized(true);
-@@ -382,15 +394,13 @@
+@@ -382,15 +394,16 @@
  
 -   private static void func_240786_a_(ServerWorld p_240786_0_, IServerWorldInfo p_240786_1_, boolean hasBonusChest, boolean p_240786_3_, boolean p_240786_4_) {
 -      ChunkGenerator chunkgenerator = p_240786_0_.getChunkProvider().getChunkGenerator();
 +   private static void findSpawnPos(ServerWorld world, IServerWorldInfo worldInfo, boolean hasBonusChest, boolean p_240786_3_, boolean p_240786_4_) {
 +      ChunkGenerator chunkgenerator = world.getChunkProvider().getChunkGenerator();
++      if (forcedSpawnPoint != null) {
++         worldInfo.setSpawn(forcedSpawnPoint, forcedSpawnAngle);
++      } else
        if (!p_240786_4_) {
 -         p_240786_1_.setSpawn(BlockPos.ZERO.up(chunkgenerator.getGroundHeight()), 0.0F);
 +         worldInfo.setSpawn(BlockPos.ZERO.up(chunkgenerator.getGroundHeight()), 0.0F);
@@ -7363,7 +7379,7 @@ diff -u1 -rN MCP-Reborn-vanilla/src/main/java/net/minecraft/server/MinecraftServ
 +   public Path resolveSavePath(FolderName folderName) {
 +      return this.anvilConverterForAnvilFile.resolveFilePath(folderName);
     }
-@@ -1580,2 +1629,54 @@
+@@ -1580,2 +1629,59 @@
     }
 +
 +   public void saveAndUploadWorld() {
@@ -7416,6 +7432,11 @@ diff -u1 -rN MCP-Reborn-vanilla/src/main/java/net/minecraft/server/MinecraftServ
 +
 +   public static boolean setSpawnInVillage() {
 +      return spawnInVillage;
++   }
++ 
++   public static void setForcedSpawnPoint(@Nullable BlockPos forcedSpawnPoint, float forcedSpawnAngle) {
++      MinecraftServer.forcedSpawnPoint = forcedSpawnPoint;
++      MinecraftServer.forcedSpawnAngle = forcedSpawnAngle;
 +   }
  }
 diff -u1 -rN MCP-Reborn-vanilla/src/main/java/net/minecraft/server/ServerEula.java MCP-Reborn/src/main/java/net/minecraft/server/ServerEula.java
